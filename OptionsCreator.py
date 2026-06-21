@@ -31,6 +31,7 @@ from urllib.parse import urlparse
 from worlds.AutoWorld import AutoWorldRegister, World
 from Options import (Option, Toggle, TextChoice, Choice, FreeText, NamedRange, Range, OptionSet, OptionList,
                      OptionCounter, Visibility)
+from BaseClasses import MultiWorld, CollectionState
 
 
 def validate_url(x):
@@ -299,6 +300,85 @@ class OptionsCreator(ThemedApp):
         except Exception:
             self.on_export_result("Could not save file.")
             raise
+            
+    def recalculate_counts(self, button: Widget):
+        if self.current_game == "":
+            self.progression_counter.text = "Progression Items: 0"
+            self.useful_counter.text = "Useful Items: 0"
+            self.trap_counter.text = "Trap Items: 0"
+            self.filler_counter.text = "Filler Items: 0"
+            self.location_counter.text = "Locations: 0"
+            return
+            
+        try:    
+            options_types = self.current_game_class.options_dataclass.type_hints
+            options_set_classes = {}
+            options_classes = {}
+            
+            for key, clss in options_types.items():
+                if key in self.options:
+                    if type(self.options[key]) == type("string"):
+                        if self.options[key].startswith("random-"):
+                            options_set_classes[key] = {1: (clss.from_text("random"))}
+                            options_classes[key] = (clss.from_text("random"))
+                        else:
+                            options_set_classes[key] = {1: (clss.from_text(self.options[key]))}
+                            options_classes[key] = (clss.from_text(self.options[key]))
+                    else:
+                        options_set_classes[key] = {1: (clss(self.options[key]))}
+                        options_classes[key] = (clss(self.options[key]))
+                else:
+                    options_set_classes[key] = {1: (clss(clss.default))}
+                    options_classes[key] = (clss(clss.default))
+                    
+            options_class = self.current_game_class.options_dataclass(**options_classes)
+            options_set_class = type('new_dict', (object,), options_set_classes)
+                
+            multiworld = MultiWorld(1)
+            multiworld.game = {1: self.current_game}
+            multiworld.player_name = {1: "you"}
+                
+            multiworld.set_options(options_set_class)
+            
+            game = self.current_game_class(multiworld, 1)
+            game.options = options_class
+            
+            multiworld.state = CollectionState(multiworld)
+            
+            game.generate_early()
+            game.create_regions()
+            game.create_items()
+            game.set_rules()
+            game.connect_entrances()
+            
+            game.generate_basic()
+            filler_count = 0;
+            progression_count = 0;
+            useful_count = 0;
+            trap_count = 0;
+            for item in game.multiworld.itempool:
+                if item.classification & 0b111 == 0:
+                    filler_count += 1
+                elif item.classification & 0b001 == 1:
+                    progression_count += 1
+                elif item.classification & 0b010 == 1:
+                    useful_count += 1
+                elif item.classification & 0b100 == 1:
+                    trap_count += 1
+                
+            self.progression_counter.text = f"Progression Items: {progression_count}"
+            self.useful_counter.text = f"Useful Items: {useful_count}"
+            self.trap_counter.text = f"Trap Items: {trap_count}"
+            self.filler_counter.text = f"Filler Items: {filler_count}"
+            self.location_counter.text = f"Locations: {len(game.multiworld.get_unfilled_locations(1))}"
+        except Exception as e:
+            self.progression_counter.text = "Progression Items: Err"
+            self.useful_counter.text = "Useful Items: Err"
+            self.trap_counter.text = "Trap Items: Err"
+            self.filler_counter.text = "Filler Items: Err"
+            self.location_counter.text = "Locations: Err"
+            MDSnackbar(MDSnackbarText(text=f"{e}"), y=dp(24), pos_hint={"center_x": 0.5}).open()
+            
 
     def export_options(self, button: Widget) -> None:
         if 0 < len(self.name_input.text) < 17 and self.current_game:
@@ -569,6 +649,7 @@ class OptionsCreator(ThemedApp):
         cls: typing.Type[World] = world_button.world_cls
 
         self.current_game = cls.game
+        self.current_game_class = cls
         if not cls.web.options_page:
             self.current_game = "None"
             return
@@ -686,6 +767,12 @@ class OptionsCreator(ThemedApp):
             self.world_buttons[world] = world_button
         self.main_panel = self.container.ids.player_layout
         self.player_options = self.container.ids.player_options
+        self.game_label = self.container.ids.game
+        self.progression_counter = self.container.ids.progression_counter
+        self.useful_counter = self.container.ids.useful_counter
+        self.trap_counter = self.container.ids.trap_counter
+        self.filler_counter = self.container.ids.filler_counter
+        self.location_counter = self.container.ids.location_counter
         self.game_label = self.container.ids.game
         self.name_input = self.container.ids.player_name
         self.option_layout = self.container.ids.options

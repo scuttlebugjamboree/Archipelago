@@ -148,7 +148,7 @@ ContainerLayout:
 
         MainLayout:
             id: player_layout
-            rows: 2
+            rows: 4
             spacing: "20dp"
 
             MDBoxLayout:
@@ -188,7 +188,55 @@ ContainerLayout:
                         MDButtonText:
                             pos_hint: {"center_x": 0.5, "center_y": 0.5}
                             text: "Export Options"
+					
+			MDBoxLayout:
+				orientation: "horizontal"
+				cols: 3
+				height: "20dp"
+                size_hint_y: None
+				
+				MDLabel:
+					id: location_counter
+					text: "Locations: 0"
+					pos_hint: {"center_x": 0.5, "center_y": 0.5}
+					
+				MDLabel:
+					id: progression_counter
+					text: "Progression Items: 0"
+					pos_hint: {"center_x": 0.5, "center_y": 0.5}
+					
+				MDLabel:
+					id: useful_counter
+					text: "Useful Items: 0"
+					pos_hint: {"center_x": 0.5, "center_y": 0.5}
+			
+			MDBoxLayout:
+				orientation: "horizontal"
+				cols: 3
+				height: "40dp"
+                size_hint_y: None
+				
+				MDLabel:
+					id: trap_counter
+					text: "Trap Items: 0"
+					pos_hint: {"center_x": 0.5, "center_y": 0.5}
+					
+				MDLabel:
+					id: filler_counter
+					text: "Filler Items: 0"
+					pos_hint: {"center_x": 0.5, "center_y": 0.5}
+					
+				MDButton:
+					pos_hint: {"center_x": 0.5, "center_y": 0.5}
+					on_press: app.recalculate_counts(self)
+					theme_width: "Custom"
+					size_hint_y: 1
+					size_hint_x: 1
 
+					MDButtonText:
+						pos_hint: {"center_x": 0.5, "center_y": 0.5}
+						text: "Recalculate Counts"
+				
             MainLayout:
                 cols: 1
                 id: options
